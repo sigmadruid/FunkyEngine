@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.IO;
+using Newtonsoft.Json;
 using UnityEditor;
 using UnityEngine;
 
@@ -15,11 +16,47 @@ namespace Funky.AssetTool.Editor
             
             var bundleBuilds = CollectAssetBundleBuilds();
 
-            var options = BuildAssetBundleOptions.ChunkBasedCompression | BuildAssetBundleOptions.ForceRebuildAssetBundle;
+            var options = BuildAssetBundleOptions.ChunkBasedCompression | BuildAssetBundleOptions.ForceRebuildAssetBundle | BuildAssetBundleOptions.StrictMode;
 
             var target = BuildTarget.StandaloneWindows64;
             
-            BuildPipeline.BuildAssetBundles(outputPath, bundleBuilds, options, target);
+            var manifest = BuildPipeline.BuildAssetBundles(outputPath, bundleBuilds, options, target);
+
+            OutputManifest(manifest, bundleBuilds, outputPath);
+            
+            AssetDatabase.Refresh();
+        }
+
+        private static void OutputManifest(AssetBundleManifest manifest, AssetBundleBuild[] builds, string outputPath)
+        {
+            var assets2Paths = new Dictionary<string, string>(); 
+            var assets2Bundles = new Dictionary<string, string>();
+            var bundleDependencies = new Dictionary<string, string[]>();
+
+            foreach (var build in builds)
+            {
+                foreach (var assetPath in build.assetNames)
+                {
+                    var assetName = Path.GetFileNameWithoutExtension(assetPath);
+                    assets2Paths.Add(assetName, assetPath);
+                    assets2Bundles.Add(assetName, build.assetBundleName);
+                }
+
+                var dependencies = manifest.GetDirectDependencies(build.assetBundleName);
+                bundleDependencies.Add(build.assetBundleName, dependencies);
+            }
+
+            var assets2PathsJson = JsonConvert.SerializeObject(assets2Paths, Formatting.Indented);
+            var assets2PathsPath = Path.Combine(outputPath, "Assets2Paths.json");
+            File.WriteAllText(assets2PathsPath, assets2PathsJson);
+            
+            var assets2BundlesJson = JsonConvert.SerializeObject(assets2Bundles, Formatting.Indented);
+            var assets2BundlesPath = Path.Combine(outputPath, "Assets2Bundles.json");
+            File.WriteAllText(assets2BundlesPath, assets2BundlesJson);
+            
+            var bundleDependenciesJson = JsonConvert.SerializeObject(bundleDependencies, Formatting.Indented);
+            var bundleDependenciesPath = Path.Combine(outputPath, "BundleDependencies.json");
+            File.WriteAllText(bundleDependenciesPath, bundleDependenciesJson);
         }
         
         private static AssetBundleBuild[] CollectAssetBundleBuilds()
