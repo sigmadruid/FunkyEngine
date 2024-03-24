@@ -2,7 +2,7 @@
 {
     public class AssetLoader : ILoader
     {
-        private readonly BundleLoader _bundleLoader = new();
+        private BundleLoader _bundleLoader;
         
         public void Release()
         {

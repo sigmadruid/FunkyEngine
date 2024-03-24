@@ -2,7 +2,7 @@
 
 namespace Funky.Utility
 {
-    public class ObjectPool<T> where T : class, new()
+    public class ObjectPool<T> where T : class, IReset, new()
     {
         private readonly Stack<T> _pool = new();
 
@@ -14,7 +14,10 @@ namespace Funky.Utility
         public void Recycle(T o)
         {
             if (o != null)
+            {
+                o.Reset();
                 _pool.Push(o);
+            }
         }
 
         public void Clear()
