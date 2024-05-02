@@ -1,4 +1,7 @@
-﻿using Funky.Utility;
+﻿using System;
+using Funky.Utility;
+using UnityEngine;
+using Object = UnityEngine.Object;
 
 namespace Funky.AssetTool.Runtime
 {
@@ -6,10 +9,16 @@ namespace Funky.AssetTool.Runtime
     {
         private ILoader _loader;
 
+        private PathProvider _pathProvider;
+        private BundleDependency _dependency;
+
         public void Initialize(bool bundleMode)
         {
+            _pathProvider = new PathProvider(Application.streamingAssetsPath);
+            _dependency = new BundleDependency();
+            
             if (bundleMode)
-                _loader = new AssetLoader();
+                _loader = new AssetLoader(_dependency, _pathProvider);
             else
                 _loader = new EditorLoader();
         }
@@ -24,14 +33,14 @@ namespace Funky.AssetTool.Runtime
             _loader.Tick(deltaTime);
         }
         
-        public AssetHandle LoadAsset(string assetName)
+        public AssetHandle LoadAsset(string assetName, Action<bool, Object> onComplete)
         {
-            return _loader.LoadAsset(assetName);
+            return _loader.LoadAsset(assetName, onComplete);
         }
         
-        public AssetHandle LoadAssetAsync(string assetName)
+        public AssetHandle LoadAssetAsync(string assetName, Action<bool, Object> onComplete)
         {
-            return _loader.LoadAssetAsync(assetName);
+            return _loader.LoadAssetAsync(assetName, onComplete);
         }
 
         public void UnloadAsset(AssetHandle handle)

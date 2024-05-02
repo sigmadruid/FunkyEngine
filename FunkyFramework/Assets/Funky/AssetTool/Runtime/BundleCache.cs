@@ -37,7 +37,6 @@ namespace Funky.AssetTool.Runtime
 
             Name = name;
             Bundle = bundle;
-            RefCount = 1;
         }
         
         public void Release(bool unloadObjects)

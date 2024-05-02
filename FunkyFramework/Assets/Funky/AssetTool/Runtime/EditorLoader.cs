@@ -1,4 +1,7 @@
-﻿namespace Funky.AssetTool.Runtime
+﻿using System;
+using Object = UnityEngine.Object;
+
+namespace Funky.AssetTool.Runtime
 {
     public class EditorLoader : ILoader
     {
@@ -11,12 +14,12 @@
         {
         }
 
-        public AssetHandle LoadAsset(string assetName)
+        public AssetHandle LoadAsset(string assetName, Action<bool, Object> onComplete)
         {
             return null;
         }
         
-        public AssetHandle LoadAssetAsync(string assetName)
+        public AssetHandle LoadAssetAsync(string assetName, Action<bool, Object> onComplete)
         {
             return null;
         }

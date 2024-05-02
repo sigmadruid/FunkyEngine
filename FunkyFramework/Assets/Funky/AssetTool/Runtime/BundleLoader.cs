@@ -46,7 +46,8 @@ namespace Funky.AssetTool.Runtime
             
             _handlePool.Clear();
             _cachePool.Clear();
-            
+            _toRemoveHandles.Clear();
+
             _dependency.Dispose();
         }
 
@@ -83,6 +84,7 @@ namespace Funky.AssetTool.Runtime
             foreach (var handle in _toRemoveHandles)
             {
                 _processingHandles.Remove(handle);
+                _handlePool.Recycle(handle);
             }
         }
 
@@ -109,13 +111,13 @@ namespace Funky.AssetTool.Runtime
         
         public BundleHandle LoadBundleAsync(string bundleName, Action<BundleHandle> onComplete)
         {
-            var existedHandle = GetProcessingHandle(bundleName);
-            if (existedHandle != null)
+            var processingHandle = GetProcessingHandle(bundleName);
+            if (processingHandle != null)
             {
-                if (existedHandle.Cancelled)
-                    existedHandle.Cancelled = false;
-                existedHandle.OnComplete += onComplete;
-                return existedHandle;
+                if (processingHandle.Cancelled)
+                    processingHandle.Cancelled = false;
+                processingHandle.OnComplete += onComplete;
+                return processingHandle;
             }
             
             var handle = _handlePool.Allocate();
@@ -138,24 +140,14 @@ namespace Funky.AssetTool.Runtime
 
         public void UnloadBundle(BundleHandle handle, bool unloadObjects = true)
         {
-            var existedHandle = GetProcessingHandle(handle.Name);
-            if (existedHandle != null)
+            var dependentBundles = _dependency.GetDependentBundles(handle.Name);
+            foreach (var depBundleName in dependentBundles)
             {
-                existedHandle.Cancelled = true;
-                return;
+                var depHandle = _handlePool.Allocate();
+                depHandle.Name = depBundleName;
+                DoUnloadBundle(depHandle);
             }
-
-            var name = handle.Name;
-            if (_caches.TryGetValue(name, out var cache))
-            {
-                cache.DecreaseRef();
-                if (cache.RefCount <= 0)
-                {
-                    cache.Release(unloadObjects);
-                    _caches.Remove(name);
-                }
-            }
-            _handlePool.Recycle(handle);
+            DoUnloadBundle(handle);
         }
 
         private void DoLoadSync(BundleHandle handle)
@@ -184,6 +176,7 @@ namespace Funky.AssetTool.Runtime
             var bundle = DoLoadBundle(name);
             cache = _cachePool.Allocate();
             cache.Fill(name, bundle);
+            cache.IncreaseRef();
             _caches.Add(name, cache);
         }
         
@@ -200,6 +193,28 @@ namespace Funky.AssetTool.Runtime
             }
 
             _processingHandles.AddLast(handle);
+        }
+        
+        private void DoUnloadBundle(BundleHandle handle, bool unloadObjects = true)
+        {
+            var processingHandle = GetProcessingHandle(handle.Name);
+            if (processingHandle != null)
+            {
+                processingHandle.Cancelled = true;
+                return;
+            }
+
+            var name = handle.Name;
+            if (_caches.TryGetValue(name, out var cache))
+            {
+                cache.DecreaseRef();
+                if (cache.RefCount <= 0)
+                {
+                    cache.Release(unloadObjects);
+                    _caches.Remove(name);
+                }
+            }
+            _handlePool.Recycle(handle);
         }
 
         private BundleHandle GetProcessingHandle(string name)

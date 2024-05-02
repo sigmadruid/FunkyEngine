@@ -7,6 +7,8 @@ namespace Funky.AssetTool.Runtime
 {
     public class BundleDependency
     {
+        private static readonly string[] Empty = {};
+        
         private Dictionary<string, string[]> _dependencies;
         public void Initialize(PathProvider pathProvider)
         {
@@ -26,7 +28,7 @@ namespace Funky.AssetTool.Runtime
                 return bundles;
             }
             Logger.Warn($"can't find dependency of {bundleName}");
-            return null;
+            return Empty;
         }
     }
 }
